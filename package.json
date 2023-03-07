@@ -17,7 +17,24 @@
         "command": "ec2-farm.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ec2-farm",
+          "title": "EC2 Farm",
+          "icon": "resources/aws-logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "ec2-farm": [
+        {
+          "id": "ec2-farm-instance-list",
+          "name": "EC2 Farm Instance List"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run package",

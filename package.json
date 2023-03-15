@@ -14,8 +14,21 @@
   "contributes": {
     "commands": [
       {
-        "command": "ec2-farm.helloWorld",
-        "title": "Hello World"
+        "command": "ec2-farm.configureAccount",
+        "title": "Configure Account"
+      },
+      {
+        "command": "ec2-farm.describeAccount",
+        "title": "Describe Account"
+      },
+      {
+        "command": "ec2-farm.cleanupAccount",
+        "title": "Cleanup Account"
+      },
+      {
+        "command": "ec2-farm.refresh",
+        "title": "Refresh Instance List",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -32,6 +45,21 @@
         {
           "id": "ec2-farm-instance-list",
           "name": "EC2 Farm Instance List"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "ec2-farm-instance-list",
+        "contents": "Welcome to EC2 Farm! \n[Configure Account](command:ec2-farm.configureAccount)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "ec2-farm.refresh",
+          "when": "view == ec2-farm-instance-list",
+          "group": "navigation"
         }
       ]
     }

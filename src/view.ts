@@ -16,10 +16,18 @@ class EC2Instance extends vscode.TreeItem {
   }
 }
 
+class NoEC2Instances extends EC2Instance {
+  constructor() {
+    super('No instances found', '', '', '', vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon('alert');
+    this.contextValue = 'no-instances';
+  }
+}
+
 class Account {
-  awsAccessKeyId: string | undefined;
-  awsSecretAccessKey: string | undefined;
-  region: string | undefined;
+  awsAccessKeyId: string = '';
+  awsSecretAccessKey: string = '';
+  region: string = '';
 }
 
 export enum Command {
@@ -79,6 +87,10 @@ async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
     const instances = result.Reservations?.flatMap(reservation => reservation.Instances || [])
       .filter(instance => instance.State?.Name !== 'terminated');
 
+    if (!instances || instances.length === 0) {
+      return [new NoEC2Instances()];
+    }
+
     return instances?.map(instance => {
       const nameTag = instance.Tags?.find(tag => tag.Key === 'Name');
       return new EC2Instance(
@@ -88,11 +100,17 @@ async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
         instance.InstanceId || '',
         vscode.TreeItemCollapsibleState.None
       );
-    }) || [];
+    });
   } catch (error) {
     console.log(error);
     return [];
   }
+}
+
+function encryptKey(str: string): string {
+  const lastFourChars = str.substring(str.length - 4);
+  const asterisks = '*'.repeat(str.length - 4);
+  return asterisks + lastFourChars;
 }
 
 export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2Instance> {
@@ -111,37 +129,46 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
 
   configureAccount(): void {
     const account = new Account();
+    const accountConfigured: Account | undefined = this.context.globalState.get('account');
 
     vscode.window.showInputBox({
-      prompt: 'AWS Access Key ID',
-      placeHolder: 'AWS Access Key ID',
       ignoreFocusOut: true,
+      prompt: 'AWS Access Key ID',
+      placeHolder: accountConfigured?.awsAccessKeyId || 'AWS Access Key ID',
     }).then((awsAccessKeyId) => {
+      awsAccessKeyId = awsAccessKeyId || accountConfigured?.awsAccessKeyId;
       if (!awsAccessKeyId) {
         return;
       }
 
       account.awsAccessKeyId = awsAccessKeyId;
+
       vscode.window.showInputBox({
-        prompt: 'AWS Secret Access Key',
-        placeHolder: 'AWS Secret Access Key',
         ignoreFocusOut: true,
+        prompt: 'AWS Secret Access Key',
+        placeHolder: accountConfigured ? encryptKey(accountConfigured.awsSecretAccessKey) : 'AWS Secret Access Key',
       }).then((awsSecretAccessKey) => {
+        awsSecretAccessKey = awsSecretAccessKey || accountConfigured?.awsSecretAccessKey;
         if (!awsSecretAccessKey) {
           return;
         }
 
         account.awsSecretAccessKey = awsSecretAccessKey;
+
         vscode.window.showInputBox({
-          prompt: 'Region',
-          placeHolder: 'Region',
           ignoreFocusOut: true,
+          prompt: 'Region',
+          placeHolder: accountConfigured?.region || 'Region',
         }).then((region) => {
+          region = region || accountConfigured?.region;
           if (!region) {
             return;
           }
+
           account.region = region;
+
           this.context.globalState.update('account', account);
+          this.describeAccount();
           this.refresh();
         });
       });
@@ -157,7 +184,7 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
          Region: ${account.region}`
       );
     } else {
-      vscode.window.showInformationMessage('Account is not configured');
+      vscode.window.showErrorMessage('Account is not configured');
     }
   }
 

@@ -4,6 +4,9 @@
   "description": "",
   "version": "0.0.1",
   "license": "SEE LICENSE IN LICENSE.txt",
+  "extensionDependencies": [
+    "ms-vscode-remote.vscode-remote-extensionpack"
+  ],
   "engines": {
     "vscode": "^1.76.0"
   },

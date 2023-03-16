@@ -57,7 +57,7 @@
         {
           "id": "ec2-farm",
           "title": "EC2 Farm",
-          "icon": "resources/aws-logo.svg"
+          "icon": "resources/ec2.svg"
         }
       ]
     },

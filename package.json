@@ -1,9 +1,15 @@
 {
   "name": "ec2-farm",
   "displayName": "EC2 Farm",
+  "publisher": "PengzhanZhao",
   "description": "",
   "version": "0.0.1",
   "license": "SEE LICENSE IN LICENSE.txt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/borontion/vscode-ec2-farm"
+  },
+  "icon": "resources/icon.png",
   "extensionDependencies": [
     "ms-vscode-remote.vscode-remote-extensionpack"
   ],

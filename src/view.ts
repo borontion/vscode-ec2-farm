@@ -81,7 +81,6 @@ async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
 
     return instances?.map(instance => {
       const nameTag = instance.Tags?.find(tag => tag.Key === 'Name');
-      console.log(instance);
       return new EC2Instance(
         nameTag?.Value || instance.InstanceId || '',
         instance.State?.Name || '',

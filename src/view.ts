@@ -232,6 +232,10 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
           vscode.window.showErrorMessage('Instance cannot be started');
         } else {
           startEC2Instance(account, instance.instanceId);
+
+          setTimeout(() => {
+            this.refresh();
+          }, 1000);
         }
         break;
       case Command.stop:
@@ -239,6 +243,10 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
           vscode.window.showErrorMessage('Instance cannot be stopped');
         } else {
           stopEC2Instance(account, instance.instanceId);
+
+          setTimeout(() => {
+            this.refresh();
+          }, 1000);
         }
         break;
     }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EC2, Config } from "aws-sdk";
+import { EC2 } from "@aws-sdk/client-ec2";
 
 class EC2Instance extends vscode.TreeItem {
   constructor(
@@ -52,15 +52,17 @@ const availableRegions = [
 
 async function startEC2Instance(account: Account, instanceId: string): Promise<void> {
   var ec2 = new EC2({
-    accessKeyId: account.awsAccessKeyId,
-    secretAccessKey: account.awsSecretAccessKey,
+    credentials: {
+      accessKeyId: account.awsAccessKeyId,
+      secretAccessKey: account.awsSecretAccessKey,
+    },
     region: account.region,
   });
 
   try {
     await ec2.startInstances({
       InstanceIds: [instanceId],
-    }).promise();
+    });
     vscode.window.showInformationMessage(`Started instance: ${instanceId}`);
   } catch (error) {
     vscode.window.showErrorMessage(`Failed to start instance: ${error}`);
@@ -69,15 +71,17 @@ async function startEC2Instance(account: Account, instanceId: string): Promise<v
 
 async function stopEC2Instance(account: Account, instanceId: string): Promise<void> {
   var ec2 = new EC2({
-    accessKeyId: account.awsAccessKeyId,
-    secretAccessKey: account.awsSecretAccessKey,
+    credentials: {
+      accessKeyId: account.awsAccessKeyId,
+      secretAccessKey: account.awsSecretAccessKey,
+    },
     region: account.region,
   });
 
   try {
     await ec2.stopInstances({
       InstanceIds: [instanceId],
-    }).promise();
+    });
     vscode.window.showInformationMessage(`Instance ${instanceId} stopped`);
   } catch (error) {
     vscode.window.showErrorMessage(`Failed to stop instance: ${error}`);
@@ -86,13 +90,15 @@ async function stopEC2Instance(account: Account, instanceId: string): Promise<vo
 
 async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
   var ec2 = new EC2({
-    accessKeyId: account.awsAccessKeyId,
-    secretAccessKey: account.awsSecretAccessKey,
+    credentials: {
+      accessKeyId: account.awsAccessKeyId,
+      secretAccessKey: account.awsSecretAccessKey,
+    },
     region: account.region,
   });
 
   try {
-    const result = await ec2.describeInstances().promise();
+    const result = await ec2.describeInstances({});
 
     // Filter out terminated instances
     const instances = result.Reservations?.flatMap(reservation => reservation.Instances || [])

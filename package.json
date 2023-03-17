@@ -142,6 +142,6 @@
     "webpack-cli": "^5.0.1"
   },
   "dependencies": {
-    "aws-sdk": "^2.1336.0"
+    "@aws-sdk/client-ec2": "^3.293.0"
   }
 }

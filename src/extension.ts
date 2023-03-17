@@ -6,7 +6,7 @@ import { Command, EC2InstanceListViewProvider } from './view';
 export function activate(context: vscode.ExtensionContext) {
 	const ec2InstanceListViewProvider = new EC2InstanceListViewProvider(context);
 
-	vscode.window.registerTreeDataProvider('ec2-farm-instance-list',
+	vscode.window.registerTreeDataProvider('instance-list',
 		ec2InstanceListViewProvider);
 
 	// Configure account

@@ -70,14 +70,14 @@
     "views": {
       "ec2-farm": [
         {
-          "id": "ec2-farm-instance-list",
-          "name": "EC2 Farm Instance List"
+          "id": "instance-list",
+          "name": "Instance List"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "ec2-farm-instance-list",
+        "view": "instance-list",
         "contents": "Welcome to EC2 Farm! \n[Configure Account](command:ec2-farm.configureAccount)"
       }
     ],
@@ -85,30 +85,30 @@
       "view/title": [
         {
           "command": "ec2-farm.refresh",
-          "when": "view == ec2-farm-instance-list",
+          "when": "view == instance-list",
           "group": "navigation"
         },
         {
           "command": "ec2-farm.configureAccount",
-          "when": "view == ec2-farm-instance-list"
+          "when": "view == instance-list"
         },
         {
           "command": "ec2-farm.cleanupAccount",
-          "when": "view == ec2-farm-instance-list"
+          "when": "view == instance-list"
         }
       ],
       "view/item/context": [
         {
           "command": "ec2-farm.startInstance",
-          "when": "view == ec2-farm-instance-list && viewItem == instance"
+          "when": "view == instance-list && viewItem == instance"
         },
         {
           "command": "ec2-farm.stopInstance",
-          "when": "view == ec2-farm-instance-list && viewItem == instance"
+          "when": "view == instance-list && viewItem == instance"
         },
         {
           "command": "ec2-farm.attachInstance",
-          "when": "view == ec2-farm-instance-list && viewItem == instance",
+          "when": "view == instance-list && viewItem == instance",
           "group": "inline"
         }
       ]

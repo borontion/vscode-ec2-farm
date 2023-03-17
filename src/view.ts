@@ -224,12 +224,13 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
       await new Promise(resolve => setTimeout(resolve, 1000));
       this.refresh();
 
-      await waitUntilInstanceRunning({
-        client: ec2,
-        maxWaitTime: 60,
-      }, {
-        InstanceIds: [instanceId],
-      });
+      // Temporarily disable waiting
+      // await waitUntilInstanceRunning({
+      //   client: ec2,
+      //   maxWaitTime: 60,
+      // }, {
+      //   InstanceIds: [instanceId],
+      // });
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to start instance: ${error} `);
     }
@@ -254,12 +255,13 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
       await new Promise(resolve => setTimeout(resolve, 1000));
       this.refresh();
 
-      await waitUntilInstanceStopped({
-        client: ec2,
-        maxWaitTime: 60,
-      }, {
-        InstanceIds: [instanceId],
-      });
+      // Temporarily disable waiting
+      // await waitUntilInstanceStopped({
+      //   client: ec2,
+      //   maxWaitTime: -1,
+      // }, {
+      //   InstanceIds: [instanceId],
+      // });
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to stop instance: ${error} `);
     }

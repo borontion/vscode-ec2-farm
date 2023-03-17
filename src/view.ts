@@ -261,6 +261,11 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
         return;
       }
 
+      if (!instance.address) {
+        vscode.window.showErrorMessage('Instance does not have a public IP address');
+        return;
+      }
+
       vscode.commands.executeCommand('opensshremotes.openEmptyWindow', {
         host: `${username}@${instance.address}`,
       });

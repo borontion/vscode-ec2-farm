@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EC2 } from "aws-sdk";
+import { EC2, Config } from "aws-sdk";
 
 class EC2Instance extends vscode.TreeItem {
   constructor(
@@ -21,6 +21,15 @@ class NoEC2Instances extends EC2Instance {
     super('No instances found', '', '', '', vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon('alert');
     this.contextValue = 'no-instances';
+  }
+}
+
+class FailedRequest extends EC2Instance {
+  constructor(error: string) {
+    super('Failed to retrieve instances', '', '', '', vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon('alert');
+    this.contextValue = 'failed-request';
+    this.tooltip = error;
   }
 }
 
@@ -55,7 +64,6 @@ async function startEC2Instance(account: Account, instanceId: string): Promise<v
     vscode.window.showInformationMessage(`Started instance: ${instanceId}`);
   } catch (error) {
     vscode.window.showErrorMessage(`Failed to start instance: ${error}`);
-    console.log(error);
   }
 }
 
@@ -73,7 +81,6 @@ async function stopEC2Instance(account: Account, instanceId: string): Promise<vo
     vscode.window.showInformationMessage(`Instance ${instanceId} stopped`);
   } catch (error) {
     vscode.window.showErrorMessage(`Failed to stop instance: ${error}`);
-    console.log(error);
   }
 }
 
@@ -91,6 +98,7 @@ async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
     const instances = result.Reservations?.flatMap(reservation => reservation.Instances || [])
       .filter(instance => instance.State?.Name !== 'terminated');
 
+    // Can not find any instances
     if (!instances || instances.length === 0) {
       return [new NoEC2Instances()];
     }
@@ -106,8 +114,10 @@ async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
       );
     });
   } catch (error) {
-    console.log(error);
-    return [];
+    if (error instanceof Error) {
+      return [new FailedRequest(error.message)];
+    }
+    return [new FailedRequest('Unknown error')];
   }
 }
 
@@ -154,8 +164,13 @@ async function configureAccount(accountConfigured: Account | undefined): Promise
 }
 
 function hideKey(str: string): string {
-  const lastFourChars = str.substring(str.length - 4);
-  const asterisks = '*'.repeat(str.length - 4);
+  const shownChars = 4;
+  if (str.length <= shownChars) {
+    return str;
+  }
+
+  const lastFourChars = str.substring(str.length - shownChars);
+  const asterisks = '*'.repeat(str.length - shownChars);
   return asterisks + lastFourChars;
 }
 
@@ -257,7 +272,6 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
 
   getChildren(element?: EC2Instance): Thenable<EC2Instance[]> {
     const account: Account | undefined = this.context.globalState.get('account');
-
     if (!account) {
       return Promise.resolve([]);
     }

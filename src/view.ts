@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EC2 } from "@aws-sdk/client-ec2";
+import { EC2, waitUntilInstanceRunning, waitUntilInstanceStopped } from "@aws-sdk/client-ec2";
 
 class EC2Instance extends vscode.TreeItem {
   constructor(
@@ -50,125 +50,6 @@ const availableRegions = [
   'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3',
   'eu-north-1', 'sa-east-1'];
 
-async function startEC2Instance(account: Account, instanceId: string): Promise<void> {
-  var ec2 = new EC2({
-    credentials: {
-      accessKeyId: account.awsAccessKeyId,
-      secretAccessKey: account.awsSecretAccessKey,
-    },
-    region: account.region,
-  });
-
-  try {
-    await ec2.startInstances({
-      InstanceIds: [instanceId],
-    });
-    vscode.window.showInformationMessage(`Started instance: ${instanceId}`);
-  } catch (error) {
-    vscode.window.showErrorMessage(`Failed to start instance: ${error}`);
-  }
-}
-
-async function stopEC2Instance(account: Account, instanceId: string): Promise<void> {
-  var ec2 = new EC2({
-    credentials: {
-      accessKeyId: account.awsAccessKeyId,
-      secretAccessKey: account.awsSecretAccessKey,
-    },
-    region: account.region,
-  });
-
-  try {
-    await ec2.stopInstances({
-      InstanceIds: [instanceId],
-    });
-    vscode.window.showInformationMessage(`Instance ${instanceId} stopped`);
-  } catch (error) {
-    vscode.window.showErrorMessage(`Failed to stop instance: ${error}`);
-  }
-}
-
-async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
-  var ec2 = new EC2({
-    credentials: {
-      accessKeyId: account.awsAccessKeyId,
-      secretAccessKey: account.awsSecretAccessKey,
-    },
-    region: account.region,
-  });
-
-  try {
-    const result = await ec2.describeInstances({});
-
-    // Filter out terminated instances
-    const instances = result.Reservations?.flatMap(reservation => reservation.Instances || [])
-      .filter(instance => instance.State?.Name !== 'terminated');
-
-    // Can not find any instances
-    if (!instances || instances.length === 0) {
-      return [new NoEC2Instances()];
-    }
-
-    return instances?.map(instance => {
-      const nameTag = instance.Tags?.find(tag => tag.Key === 'Name');
-      return new EC2Instance(
-        nameTag?.Value || instance.InstanceId || '',
-        instance.State?.Name || '',
-        instance.PublicIpAddress || '',
-        instance.InstanceId || '',
-        vscode.TreeItemCollapsibleState.None
-      );
-    });
-  } catch (error) {
-    if (error instanceof Error) {
-      return [new FailedRequest(error.message)];
-    }
-    return [new FailedRequest('Unknown error')];
-  }
-}
-
-async function configureAccount(accountConfigured: Account | undefined): Promise<Account | undefined> {
-  const account = new Account();
-
-  let awsAccessKeyId = await vscode.window.showInputBox({
-    ignoreFocusOut: true,
-    prompt: 'AWS Access Key ID',
-    placeHolder: accountConfigured ? hideKey(accountConfigured.awsAccessKeyId) : 'AWS Access Key ID',
-    password: true,
-  });
-  awsAccessKeyId = awsAccessKeyId || accountConfigured?.awsAccessKeyId;
-  if (!awsAccessKeyId) {
-    return;
-  }
-  account.awsAccessKeyId = awsAccessKeyId;
-
-  let awsSecretAccessKey = await vscode.window.showInputBox({
-    ignoreFocusOut: true,
-    prompt: 'AWS Secret Access Key',
-    placeHolder: accountConfigured ? hideKey(accountConfigured.awsSecretAccessKey) : 'AWS Secret Access Key',
-    password: true,
-  });
-  awsSecretAccessKey = awsSecretAccessKey || accountConfigured?.awsSecretAccessKey;
-  if (!awsSecretAccessKey) {
-    return;
-  }
-  account.awsSecretAccessKey = awsSecretAccessKey;
-
-  let region = await vscode.window.showQuickPick(availableRegions, {
-    title: 'Region',
-    canPickMany: false,
-    ignoreFocusOut: true,
-    placeHolder: accountConfigured?.region || 'Region',
-  });
-  region = region || accountConfigured?.region;
-  if (!region) {
-    return;
-  }
-  account.region = region;
-
-  return account;
-}
-
 function hideKey(str: string): string {
   const shownChars = 4;
   if (str.length <= shownChars) {
@@ -194,10 +75,52 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
     this._onDidChangeTreeData.fire(undefined);
   }
 
+  async inputAccount(accountConfigured: Account | undefined): Promise<Account | undefined> {
+    const account = new Account();
+
+    let awsAccessKeyId = await vscode.window.showInputBox({
+      ignoreFocusOut: true,
+      prompt: 'AWS Access Key ID',
+      placeHolder: accountConfigured ? hideKey(accountConfigured.awsAccessKeyId) : 'AWS Access Key ID',
+      password: true,
+    });
+    awsAccessKeyId = awsAccessKeyId || accountConfigured?.awsAccessKeyId;
+    if (!awsAccessKeyId) {
+      return;
+    }
+    account.awsAccessKeyId = awsAccessKeyId;
+
+    let awsSecretAccessKey = await vscode.window.showInputBox({
+      ignoreFocusOut: true,
+      prompt: 'AWS Secret Access Key',
+      placeHolder: accountConfigured ? hideKey(accountConfigured.awsSecretAccessKey) : 'AWS Secret Access Key',
+      password: true,
+    });
+    awsSecretAccessKey = awsSecretAccessKey || accountConfigured?.awsSecretAccessKey;
+    if (!awsSecretAccessKey) {
+      return;
+    }
+    account.awsSecretAccessKey = awsSecretAccessKey;
+
+    let region = await vscode.window.showQuickPick(availableRegions, {
+      title: 'Region',
+      canPickMany: false,
+      ignoreFocusOut: true,
+      placeHolder: accountConfigured?.region || 'Region',
+    });
+    region = region || accountConfigured?.region;
+    if (!region) {
+      return;
+    }
+    account.region = region;
+
+    return account;
+  }
+
   configureAccount(): void {
     const accountConfigured: Account | undefined = this.context.globalState.get('account');
 
-    configureAccount(accountConfigured).then(account => {
+    this.inputAccount(accountConfigured).then(account => {
       if (account) {
         this.context.globalState.update('account', account);
         this.refresh();
@@ -229,24 +152,22 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
     switch (cmd) {
       case Command.start:
         if (instance.status !== 'stopped') {
-          vscode.window.showErrorMessage('Instance cannot be started');
+          vscode.window.showErrorMessage('Instance cannot be started unless it is stopped');
         } else {
-          startEC2Instance(account, instance.instanceId);
-
-          setTimeout(() => {
+          this.startEC2Instance(account, instance.instanceId).then(() => {
             this.refresh();
-          }, 1000);
+            vscode.window.showInformationMessage(`Instance ${instance.instanceId} started`);
+          });
         }
         break;
       case Command.stop:
         if (instance.status !== 'running') {
-          vscode.window.showErrorMessage('Instance cannot be stopped');
+          vscode.window.showErrorMessage('Instance cannot be stopped unless it is running');
         } else {
-          stopEC2Instance(account, instance.instanceId);
-
-          setTimeout(() => {
+          this.stopEC2Instance(account, instance.instanceId).then(() => {
             this.refresh();
-          }, 1000);
+            vscode.window.showInformationMessage(`Instance ${instance.instanceId} stopped`);
+          });
         }
         break;
     }
@@ -285,6 +206,104 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
     this.refresh();
   }
 
+  async startEC2Instance(account: Account, instanceId: string): Promise<void> {
+    var ec2 = new EC2({
+      credentials: {
+        accessKeyId: account.awsAccessKeyId,
+        secretAccessKey: account.awsSecretAccessKey,
+      },
+      region: account.region,
+    });
+
+    try {
+      await ec2.startInstances({
+        InstanceIds: [instanceId],
+      });
+      vscode.window.showInformationMessage('Starting instance...');
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      this.refresh();
+
+      await waitUntilInstanceRunning({
+        client: ec2,
+        maxWaitTime: 60,
+      }, {
+        InstanceIds: [instanceId],
+      });
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to start instance: ${error} `);
+    }
+  }
+
+  async stopEC2Instance(account: Account, instanceId: string): Promise<void> {
+    var ec2 = new EC2({
+      credentials: {
+        accessKeyId: account.awsAccessKeyId,
+        secretAccessKey: account.awsSecretAccessKey,
+      },
+      region: account.region,
+    });
+
+    try {
+      await ec2.stopInstances({
+        InstanceIds: [instanceId],
+      });
+
+      vscode.window.showInformationMessage('Stopping instance...');
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      this.refresh();
+
+      await waitUntilInstanceStopped({
+        client: ec2,
+        maxWaitTime: 60,
+      }, {
+        InstanceIds: [instanceId],
+      });
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to stop instance: ${error} `);
+    }
+  }
+
+  async getEC2Instances(account: Account): Promise<EC2Instance[]> {
+    var ec2 = new EC2({
+      credentials: {
+        accessKeyId: account.awsAccessKeyId,
+        secretAccessKey: account.awsSecretAccessKey,
+      },
+      region: account.region,
+    });
+
+    try {
+      const result = await ec2.describeInstances({});
+
+      // Filter out terminated instances
+      const instances = result.Reservations?.flatMap(reservation => reservation.Instances || [])
+        .filter(instance => instance.State?.Name !== 'terminated');
+
+      // Can not find any instances
+      if (!instances || instances.length === 0) {
+        return [new NoEC2Instances()];
+      }
+
+      return instances?.map(instance => {
+        const nameTag = instance.Tags?.find(tag => tag.Key === 'Name');
+        return new EC2Instance(
+          nameTag?.Value || instance.InstanceId || '',
+          instance.State?.Name || '',
+          instance.PublicIpAddress || '',
+          instance.InstanceId || '',
+          vscode.TreeItemCollapsibleState.None
+        );
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return [new FailedRequest(error.message)];
+      }
+      return [new FailedRequest('Unknown error')];
+    }
+  }
+
   getTreeItem(element: EC2Instance): vscode.TreeItem {
     return element;
   }
@@ -298,7 +317,7 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
     if (element) {
       return Promise.resolve([]);
     } else {
-      return getEC2Instances(account);
+      return this.getEC2Instances(account);
     }
   }
 }

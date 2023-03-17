@@ -36,6 +36,10 @@ export enum Command {
 }
 
 const defaultUsername = 'ubuntu';
+const availableRegions = [
+  'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1',
+  'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3',
+  'eu-north-1', 'sa-east-1'];
 
 async function startEC2Instance(account: Account, instanceId: string): Promise<void> {
   var ec2 = new EC2({
@@ -107,7 +111,49 @@ async function getEC2Instances(account: Account): Promise<EC2Instance[]> {
   }
 }
 
-function encryptKey(str: string): string {
+async function configureAccount(accountConfigured: Account | undefined): Promise<Account | undefined> {
+  const account = new Account();
+
+  let awsAccessKeyId = await vscode.window.showInputBox({
+    ignoreFocusOut: true,
+    prompt: 'AWS Access Key ID',
+    placeHolder: accountConfigured ? hideKey(accountConfigured.awsAccessKeyId) : 'AWS Access Key ID',
+    password: true,
+  });
+  awsAccessKeyId = awsAccessKeyId || accountConfigured?.awsAccessKeyId;
+  if (!awsAccessKeyId) {
+    return;
+  }
+  account.awsAccessKeyId = awsAccessKeyId;
+
+  let awsSecretAccessKey = await vscode.window.showInputBox({
+    ignoreFocusOut: true,
+    prompt: 'AWS Secret Access Key',
+    placeHolder: accountConfigured ? hideKey(accountConfigured.awsSecretAccessKey) : 'AWS Secret Access Key',
+    password: true,
+  });
+  awsSecretAccessKey = awsSecretAccessKey || accountConfigured?.awsSecretAccessKey;
+  if (!awsSecretAccessKey) {
+    return;
+  }
+  account.awsSecretAccessKey = awsSecretAccessKey;
+
+  let region = await vscode.window.showQuickPick(availableRegions, {
+    title: 'Region',
+    canPickMany: false,
+    ignoreFocusOut: true,
+    placeHolder: accountConfigured?.region || 'Region',
+  });
+  region = region || accountConfigured?.region;
+  if (!region) {
+    return;
+  }
+  account.region = region;
+
+  return account;
+}
+
+function hideKey(str: string): string {
   const lastFourChars = str.substring(str.length - 4);
   const asterisks = '*'.repeat(str.length - 4);
   return asterisks + lastFourChars;
@@ -128,50 +174,13 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
   }
 
   configureAccount(): void {
-    const account = new Account();
     const accountConfigured: Account | undefined = this.context.globalState.get('account');
 
-    vscode.window.showInputBox({
-      ignoreFocusOut: true,
-      prompt: 'AWS Access Key ID',
-      placeHolder: accountConfigured?.awsAccessKeyId || 'AWS Access Key ID',
-    }).then((awsAccessKeyId) => {
-      awsAccessKeyId = awsAccessKeyId || accountConfigured?.awsAccessKeyId;
-      if (!awsAccessKeyId) {
-        return;
+    configureAccount(accountConfigured).then(account => {
+      if (account) {
+        this.context.globalState.update('account', account);
+        this.refresh();
       }
-
-      account.awsAccessKeyId = awsAccessKeyId;
-
-      vscode.window.showInputBox({
-        ignoreFocusOut: true,
-        prompt: 'AWS Secret Access Key',
-        placeHolder: accountConfigured ? encryptKey(accountConfigured.awsSecretAccessKey) : 'AWS Secret Access Key',
-      }).then((awsSecretAccessKey) => {
-        awsSecretAccessKey = awsSecretAccessKey || accountConfigured?.awsSecretAccessKey;
-        if (!awsSecretAccessKey) {
-          return;
-        }
-
-        account.awsSecretAccessKey = awsSecretAccessKey;
-
-        vscode.window.showInputBox({
-          ignoreFocusOut: true,
-          prompt: 'Region',
-          placeHolder: accountConfigured?.region || 'Region',
-        }).then((region) => {
-          region = region || accountConfigured?.region;
-          if (!region) {
-            return;
-          }
-
-          account.region = region;
-
-          this.context.globalState.update('account', account);
-          this.describeAccount();
-          this.refresh();
-        });
-      });
     });
   }
 
@@ -250,7 +259,6 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
     const account: Account | undefined = this.context.globalState.get('account');
 
     if (!account) {
-      vscode.window.showErrorMessage('Account is not configured');
       return Promise.resolve([]);
     }
 

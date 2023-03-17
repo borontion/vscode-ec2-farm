@@ -87,6 +87,14 @@
           "command": "ec2-farm.refresh",
           "when": "view == ec2-farm-instance-list",
           "group": "navigation"
+        },
+        {
+          "command": "ec2-farm.configureAccount",
+          "when": "view == ec2-farm-instance-list"
+        },
+        {
+          "command": "ec2-farm.cleanupAccount",
+          "when": "view == ec2-farm-instance-list"
         }
       ],
       "view/item/context": [

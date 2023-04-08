@@ -112,6 +112,16 @@
           "group": "inline"
         }
       ]
+    },
+    "configuration": {
+      "title": "EC2 Farm",
+      "properties": {
+        "ec2-farm.instance-name-filter": {
+          "type": "string",
+          "default": "",
+          "description": "A Regex filter for instances by name"
+        }
+      }
     }
   },
   "scripts": {

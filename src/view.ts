@@ -280,8 +280,17 @@ export class EC2InstanceListViewProvider implements vscode.TreeDataProvider<EC2I
       const result = await ec2.describeInstances({});
 
       // Filter out terminated instances
-      const instances = result.Reservations?.flatMap(reservation => reservation.Instances || [])
+      var instances = result.Reservations?.flatMap(reservation => reservation.Instances || [])
         .filter(instance => instance.State?.Name !== 'terminated');
+
+      // Filter based on configuration
+      const filter: string | undefined = vscode.workspace.getConfiguration('ec2-farm').get('instance-name-filter');
+      if (instances && filter && filter !== '') {
+        instances = instances.filter(instance => {
+          const nameTag = instance.Tags?.find(tag => tag.Key === 'Name');
+          return RegExp(filter).test(nameTag?.Value || '');
+        });
+      }
 
       // Can not find any instances
       if (!instances || instances.length === 0) {

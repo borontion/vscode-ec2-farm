@@ -4,13 +4,13 @@ A VSCode extension for easy remote development on EC2 instances.
 
 ## Features
 
-- [x] Open VSCode on EC2 instance via SSH
-  ![Open VSCode on EC2 instance via SSH](./images/gif1.gif)
-- [x] Start/Stop EC2 instances
-  ![Start/Stop EC2 instances](./images/gif2.gif)
-- [x] Configure AWS credential
-- [ ] Switch between multiple AWS regions
-- [ ] Automatically start/stop EC2 instances
+**Open VSCode on EC2 instance via SSH**
+
+![Open VSCode on EC2 instance via SSH](./images/gif1.gif)
+
+**Start/Stop EC2 instances**
+
+![Start/Stop EC2 instances](./images/gif2.gif)
 
 To add more features, please create an issue.
 
